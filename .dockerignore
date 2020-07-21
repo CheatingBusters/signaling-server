@@ -1,0 +1,15 @@
+# Ignore files when docker build
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Git files
+.git
+.gitignore
+LICENSE
+README.md
+
+# Node files
+node_modules
+.next
