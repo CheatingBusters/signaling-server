@@ -3,7 +3,7 @@ const express = require('express')
 const http = require('http')
 const app = express()
 const server = http.createServer(app)
-const socket = require('socket.io')
+const socket = require('socket.io')(server, { origins: '*:*' })
 const io = socket(server)
 
 const testees = {}
