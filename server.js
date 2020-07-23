@@ -79,9 +79,12 @@ io.on('connection', socket => {
   })
 
   socket.on('sending signal', payload => {
-    io.to(payload.userToSignal).emit('user joined', {
+    // Check UUID
+    io.to(payload.userToSignal).emit('ADD_TESTEE', {
       signal: payload.signal,
-      callerID: payload.callerID
+      callerID: payload.callerID,
+      testee_id: payload.uuid,
+      testee_socket_id: payload.callerID
     })
   })
 
