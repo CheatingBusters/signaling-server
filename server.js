@@ -9,44 +9,18 @@ const io = socket(server)
 const testees = {}
 const testers = {}
 const users = {}
+
 const socketToRoom = {}
 
 io.on('connection', socket => {
   console.log('connection occured')
-  // tester has joined the room
-  // make p2p connection with everybody in the room
-  socket.on('tester join room', roomID => {
-    console.log('Tester has joined the room!', roomID)
+  socket.on('JOIN_OVERSEER', data => {
+    // data = JSON DATA
+    const value = JSON.parse(data)
+    const roomID = value.testingroom_id
+    const overseerID = value.overseer_id
 
-    if (users[roomID]) {
-      const length = testers[roomID].length
-      if (length === 4) {
-        console.log('Tester room full')
-        socket.emit('room full')
-        return;
-      }
-
-      users[roomID].push(socket.id)
-    } else {
-      users[roomID] = [socket.id]
-    }
-
-    if (testers[roomID]) {
-      testers[roomID].push(socket.id)
-    } else {
-      testers[roomID] = [socket.id]
-    }
-
-    socketToRoom[socket.id] = roomID
-    console.log(users[roomID], roomID, socket.id)
-    const usersInThisRoom = users[roomID].filter(id => id !== socket.id)
-    console.log('users in this room:', usersInThisRoom)
-    socket.emit('all users', usersInThisRoom)
-  })
-  // testee has joined the room
-  // only make p2p connection with testers
-  socket.on('join room', roomID => {
-    console.log('User has joined the room!', roomID)
+    console.log('Tester', overseerID , 'has joined the room!', roomID)
 
     if (users[roomID]) {
       const length = users[roomID].length
@@ -55,25 +29,53 @@ io.on('connection', socket => {
         socket.emit('room full')
         return
       }
-
-      users[roomID].push(socket.id)
-    } else {
-      users[roomID] = [socket.id]
     }
+    users[roomID].socket_id.push(socket.id)
+    users[roomID].uuid.push(overseerID)
 
-    if (testees[roomID]) {
-      testees[roomID].push(socket.id)
-    } else {
-      testees[roomID] = [socket.id]
-    }
-    console.log(users[roomID], roomID, socket.id)
+    testers[roomID].socket_id.push(socket.id)
+    testers[roomID].uuid.push(overseerID)
+
     socketToRoom[socket.id] = roomID
-    if (testers[roomID]) {
-      const testersInThisRoom = testers[roomID].filter(id => id !== socket.id)
-      socket.emit('all testers', testersInThisRoom)
-    } else {
-      socket.emit('all testers', [])
+    console.log(users[roomID], roomID, socket.id)
+    const usersInThisRoom = users[roomID].filter(id => {
+      return id.socket_id !== socket.id
+    })
+    console.log('users in this room:', usersInThisRoom)
+    socket.emit('GET_TESTEES', JSON.stringify(usersInThisRoom))
+  })
+  // testee has joined the room
+  // only make p2p connection with testers
+  socket.on('JOIN_TESTEE', data => {
+    const value = JSON.parse(data)
+    const roomID = value.testingroom_id
+    const testeeID = value.testee_id
+
+    console.log('User id [' + testeeID + '] has joined the room!' + roomID)
+
+    if (users[roomID]) {
+      const length = users[roomID].length
+      if (length === 4) {
+        console.log('Tester room full')
+        socket.emit('room full')
+        return
+      }
     }
+    users[roomID].socket_id.push(socket.id)
+    users[roomID].uuid.push(testeeID)
+
+    testees[roomID].socket_id.push(socket.id)
+    testees[roomID].uuid.push(testeeID)
+
+    console.log(users[roomID])
+    console.log('joined user socket id is ', socket.id)
+
+    socketToRoom[socket.id] = roomID
+
+    const testersInThisRoom = testers[roomID].filter(id => {
+      return id.socket_id !== socket.id
+    })
+    socket.emit('GET_TESTERS', JSON.stringify(testersInThisRoom))
   })
 
   socket.on('sending signal', payload => {
