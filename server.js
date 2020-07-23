@@ -20,7 +20,7 @@ io.on('connection', socket => {
     const roomID = value.testingroom_id
     const overseerID = value.overseer_id
 
-    console.log('Tester', overseerID , 'has joined the room!', roomID)
+    console.log('Tester', overseerID, 'has joined the room!', roomID)
 
     if (users[roomID]) {
       const length = users[roomID].length
@@ -42,7 +42,7 @@ io.on('connection', socket => {
       return id.socket_id !== socket.id
     })
     console.log('users in this room:', usersInThisRoom)
-    socket.emit('GET_TESTEES', JSON.stringify(usersInThisRoom))
+    socket.emit('GET_TESTEES', usersInThisRoom)
   })
   // testee has joined the room
   // only make p2p connection with testers
@@ -75,7 +75,7 @@ io.on('connection', socket => {
     const testersInThisRoom = testers[roomID].filter(id => {
       return id.socket_id !== socket.id
     })
-    socket.emit('GET_TESTERS', JSON.stringify(testersInThisRoom))
+    socket.emit('GET_TESTERS', testersInThisRoom)
   })
 
   socket.on('sending signal', payload => {
