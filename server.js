@@ -15,33 +15,40 @@ const socketToRoom = {}
 io.on('connection', socket => {
   console.log('connection occured')
   socket.on('JOIN_OVERSEER', data => {
-    // data = JSON DATA
-    const value = JSON.parse(data)
-    const roomID = value.testingroom_id
-    const overseerID = value.overseer_id
+    const roomID = data.testingroom_id
+    const overseerID = data.overseer_id
 
     console.log('Tester', overseerID, 'has joined the room!', roomID)
+
+    const user = {
+      socket_id: socket.id,
+      uuid: overseerID
+    }
+    console.log('This tester is:', user)
 
     if (users[roomID]) {
       const length = users[roomID].length
       if (length === 4) {
         console.log('Tester room full')
-        socket.emit('room full')
+        socket.emit('room full') // but this is unexpected emit...
         return
       }
+    } else {
+      users[roomID] = []
     }
-    users[roomID].socket_id.push(socket.id)
-    users[roomID].uuid.push(overseerID)
+    users[roomID].push(user)
 
-    testers[roomID].socket_id.push(socket.id)
-    testers[roomID].uuid.push(overseerID)
+    if (!testers[roomID]) {
+      testers[roomID] = []
+    }
+    testers[roomID].push(user)
 
     socketToRoom[socket.id] = roomID
     console.log(users[roomID], roomID, socket.id)
     const usersInThisRoom = users[roomID].filter(id => {
       return id.socket_id !== socket.id
     })
-    console.log('users in this room:', usersInThisRoom)
+    console.log('users in this room except him/herself:', usersInThisRoom)
     socket.emit('GET_TESTEES', usersInThisRoom)
   })
   // testee has joined the room
