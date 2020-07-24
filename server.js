@@ -52,7 +52,7 @@ io.on('connection', socket => {
 
     // Get the teacher in ther testingroom
     console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
-    socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
+    socket.to(testingroomID).emit('GET_TEACHER', testingrooms[testingroomID].teacher)
 
     // Get the students in the testingroom
     if (!testingrooms[testingroomID].students) {
@@ -89,18 +89,17 @@ io.on('connection', socket => {
       socket.emit('FULL_STUDENTS', testingroomID)
       return
     }
-
     testingrooms[testingroomID].students.push({
       socketID: socket.id,
       studentID: studentID
     })
+    socket.join(testingroomID)
 
     // Get the students in the testingroom
-    console.log('GET_STUDENTS', testingrooms[testingroomID].students)
-    socket.emit('GET_STUDENTS', testingrooms[testingroomID].students)
-
     // Get the teacher in ther testingroom
     if (testingrooms[testingroomID].teacher) {
+      console.log('GET_STUDENTS', testingrooms[testingroomID].students)
+      socket.to(testingrooms[testingroomID].teacher.socketID).emit('GET_STUDENTS', testingrooms[testingroomID].students)
       console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
       socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
     }
