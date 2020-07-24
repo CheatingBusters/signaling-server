@@ -6,30 +6,30 @@ const server = http.createServer(app)
 const socket = require('socket.io')
 const io = socket(server, { origins: '*:*' })
 
-const testees = {}
-const testers = {}
+const students = {}
+const teachers = {}
 const users = {}
 
 const socketToRoom = {}
 
 io.on('connection', socket => {
   console.log('connection occured')
-  socket.on('JOIN_OVERSEER', data => {
+  socket.on('JOIN_TEACHER', data => {
     const roomID = data.testingroom_id
-    const overseerID = data.overseer_id
+    const teacherID = data.teacher_id
 
-    console.log('Tester', overseerID, 'has joined the room!', roomID)
+    console.log('Teacher', teacherID, 'has joined the room!', roomID)
 
     const user = {
       socket_id: socket.id,
-      uuid: overseerID
+      uuid: teacherID
     }
-    console.log('This tester is:', user)
+    console.log('This teacher is:', user)
 
     if (users[roomID]) {
       const length = users[roomID].length
       if (length === 4) {
-        console.log('Tester room full')
+        console.log('room full')
         socket.emit('room full') // but this is unexpected emit...
         return
       }
@@ -38,10 +38,10 @@ io.on('connection', socket => {
     }
     users[roomID].push(user)
 
-    if (!testers[roomID]) {
-      testers[roomID] = []
+    if (!teachers[roomID]) {
+      teachers[roomID] = []
     }
-    testers[roomID].push(user)
+    teachers[roomID].push(user)
 
     socketToRoom[socket.id] = roomID
     console.log(users[roomID], roomID, socket.id)
@@ -49,45 +49,58 @@ io.on('connection', socket => {
       return id.socket_id !== socket.id
     })
     console.log('users in this room except him/herself:', usersInThisRoom)
-    socket.emit('GET_TESTEES', usersInThisRoom)
+    socket.emit('GET_STUDENTS', usersInThisRoom)
   })
   // testee has joined the room
   // only make p2p connection with testers
-  socket.on('JOIN_TESTEE', data => {
-    const value = JSON.parse(data)
-    const roomID = value.testingroom_id
-    const testeeID = value.testee_id
+  socket.on('JOIN_STUDENT', data => {
+    const roomID = data.testingroom_id
+    const studentID = data.student_id
 
-    console.log('User id [' + testeeID + '] has joined the room!' + roomID)
-
+    console.log('Student id [' + studentID + '] has joined the room!' + roomID)
+    const user = {
+      socket_id: socket.id,
+      uuid: studentID
+    }
     if (users[roomID]) {
       const length = users[roomID].length
       if (length === 4) {
-        console.log('Tester room full')
+        console.log('room full')
         socket.emit('room full')
         return
       }
+    } else {
+      users[roomID] = []
     }
-    users[roomID].socket_id.push(socket.id)
-    users[roomID].uuid.push(testeeID)
+    users[roomID].push(user)
 
-    testees[roomID].socket_id.push(socket.id)
-    testees[roomID].uuid.push(testeeID)
+    if (!students[roomID]) {
+      students[roomID] = []
+    }
+    students[roomID].push(user)
 
     console.log(users[roomID])
     console.log('joined user socket id is ', socket.id)
 
     socketToRoom[socket.id] = roomID
 
-    const testersInThisRoom = testers[roomID].filter(id => {
+    const teachersInThisRoom = teachers[roomID].filter(id => {
       return id.socket_id !== socket.id
     })
-    socket.emit('GET_TESTERS', testersInThisRoom)
+    socket.emit('GET_TEACHERS', teachersInThisRoom)
   })
 
   socket.on('sending signal', payload => {
-    // Check UUID
-    io.to(payload.userToSignal).emit('ADD_TESTEE', {
+    // I thinkk reach here when both teacher/student try to join?
+    // Check this is from tester / testee and change msg according to it
+    /*
+    if(payload.isStudent){
+      emit('ADD_TEACHER')
+    }else{
+      emit('ADD_STUDENT')
+    }
+    */
+    io.to(payload.userToSignal).emit('user joined', {
       signal: payload.signal,
       callerID: payload.callerID,
       testee_id: payload.uuid,
@@ -109,6 +122,7 @@ io.on('connection', socket => {
       room = room.filter(id => id !== socket.id)
       users[roomID] = room
     }
+    // send other peers that it is disconnected!
   })
 })
 
