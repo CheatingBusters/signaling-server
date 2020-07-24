@@ -1,128 +1,109 @@
 require('dotenv').config()
 const express = require('express')
 const http = require('http')
+const socket = require('socket.io')
+
 const app = express()
 const server = http.createServer(app)
-const socket = require('socket.io')
 const io = socket(server, { origins: '*:*' })
 
-const students = {}
-const teachers = {}
-const users = {}
-
-const socketToRoom = {}
+/*******************************************************************************
+testingrooms: {
+  teacher: {
+    socketID: 'string(hash)',
+    teacherID: 'string(uuid)'
+  },
+  students: [
+    {
+      socketID: 'string(hash)',
+      studentID: 'string(uuid)'
+    },
+    ...(up to 4 items)
+  ]
+}
+*******************************************************************************/
+const testingrooms = {}
 
 io.on('connection', socket => {
-  console.log('connection occured')
+  console.log('Connection occured from', socket.id)
+
   socket.on('JOIN_TEACHER', data => {
-    const roomID = data.testingroom_id
-    const teacherID = data.teacher_id
+    const testingroomID = data.testingroomID
+    const teacherID = data.teacherID
+    console.log('Teacher', teacherID, 'has joined the testingroom!', testingroomID)
 
-    console.log('Teacher', teacherID, 'has joined the room!', roomID)
-
-    const user = {
-      socket_id: socket.id,
-      uuid: teacherID
+    // Insert the teacher in the testingroom
+    if (!testingrooms[testingroomID]) {
+      console.log('Create the testingroom', testingroomID)
+      testingrooms[testingroomID] = {}
     }
-    console.log('This teacher is:', user)
 
-    if (users[roomID]) {
-      const length = users[roomID].length
-      if (length === 4) {
-        console.log('room full')
-        socket.emit('room full') // but this is unexpected emit...
-        return
-      }
+    if (testingrooms[testingroomID].teacher) {
+      console.log('Teacher', testingrooms[testingroomID].teacher,
+        'is already in the testingroom', testingroomID)
+      console.log('FULL_TEACHER', testingroomID)
+      socket.emit('FULL_TEACHER', testingroomID)
+      return
+    }
+    testingrooms[testingroomID].teacher = {
+      socketID: socket.id,
+      teacherID: teacherID
+    }
+
+    // Get the teacher in ther testingroom
+    console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
+    socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
+
+    // Get the students in the testingroom
+    if (!testingrooms[testingroomID].students) {
+      console.log('There are no students in testingroom', testingroomID)
+      testingrooms[testingroomID].students = []
     } else {
-      users[roomID] = []
+      console.log('Students in the testringroom', testingroomID,
+        ':', testingrooms[testingroomID].students)
+      console.log('GET_STUDENTS', testingrooms[testingroomID].students)
+      socket.emit('GET_STUDENTS', testingrooms[testingroomID].students)
     }
-    users[roomID].push(user)
-
-    if (!teachers[roomID]) {
-      teachers[roomID] = []
-    }
-    teachers[roomID].push(user)
-
-    socketToRoom[socket.id] = roomID
-    console.log(users[roomID], roomID, socket.id)
-    const usersInThisRoom = users[roomID].filter(id => {
-      return id.socket_id !== socket.id
-    })
-    console.log('users in this room except him/herself:', usersInThisRoom)
-    socket.emit('GET_STUDENTS', usersInThisRoom)
   })
-  // testee has joined the room
-  // only make p2p connection with testers
+
   socket.on('JOIN_STUDENT', data => {
-    const roomID = data.testingroom_id
-    const studentID = data.student_id
+    const testingroomID = data.testingroomID
+    const studentID = data.studentID
+    console.log('Student', studentID, 'has joined the testingroom!', testingroomID)
 
-    console.log('Student id [' + studentID + '] has joined the room!' + roomID)
-    const user = {
-      socket_id: socket.id,
-      uuid: studentID
+    // Insert the student in the testingroom
+    if (!testingrooms[testingroomID]) {
+      console.log('Create the testingroom', testingroomID)
+      testingrooms[testingroomID] = {}
     }
-    if (users[roomID]) {
-      const length = users[roomID].length
-      if (length === 4) {
-        console.log('room full')
-        socket.emit('room full')
-        return
-      }
-    } else {
-      users[roomID] = []
+
+    if (!testingrooms[testingroomID].students) {
+      console.log('There are no students in testingroom', testingroomID)
+      testingrooms[testingroomID].students = []
     }
-    users[roomID].push(user)
 
-    if (!students[roomID]) {
-      students[roomID] = []
+    if (testingrooms[testingroomID].students.length >= 4) {
+      console.log('Testingroom', testingroomID, 'is full of students',
+        testingrooms[testingroomID].students)
+      console.log('FULL_STUDENTS', testingroomID)
+      socket.emit('FULL_STUDENTS', testingroomID)
+      return
     }
-    students[roomID].push(user)
 
-    console.log(users[roomID])
-    console.log('joined user socket id is ', socket.id)
-
-    socketToRoom[socket.id] = roomID
-
-    const teachersInThisRoom = teachers[roomID].filter(id => {
-      return id.socket_id !== socket.id
+    testingrooms[testingroomID].students.push({
+      socketID: socket.id,
+      studentID: studentID
     })
-    socket.emit('GET_TEACHERS', teachersInThisRoom)
-  })
 
-  socket.on('sending signal', payload => {
-    // I thinkk reach here when both teacher/student try to join?
-    // Check this is from tester / testee and change msg according to it
-    /*
-    if(payload.isStudent){
-      emit('ADD_TEACHER')
-    }else{
-      emit('ADD_STUDENT')
+    // Get the students in the testingroom
+    console.log('GET_STUDENTS', testingrooms[testingroomID].students)
+    socket.emit('GET_STUDENTS', testingrooms[testingroomID].students)
+
+    // Get the teacher in ther testingroom
+    if (testingrooms[testingroomID].teacher) {
+      console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
+      socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
     }
-    */
-    io.to(payload.userToSignal).emit('user joined', {
-      signal: payload.signal,
-      callerID: payload.callerID,
-      testee_id: payload.uuid,
-      testee_socket_id: payload.callerID
-    })
-  })
-
-  socket.on('returning signal', payload => {
-    io.to(payload.callerID).emit('receiving returned signal', {
-      signal: payload.signal,
-      id: socket.id
-    })
-  })
-
-  socket.on('disconnect', () => {
-    const roomID = socketToRoom[socket.id]
-    let room = users[roomID]
-    if (room) {
-      room = room.filter(id => id !== socket.id)
-      users[roomID] = room
-    }
-    // send other peers that it is disconnected!
   })
 })
 
