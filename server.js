@@ -140,7 +140,7 @@ io.on('connection', socket => {
     const testingroomID = socketToRoom[socket.id]
     // Delete socket id from table
     // Check whether this id is teacher or is student
-    if (testingrooms[testingroomID].teacher.socketID == socket.id) {
+    if (testingrooms[testingroomID].teacher && testingrooms[testingroomID].teacher.socketID === socket.id) {
       // Teacher disconnect
       // Announce test end
     } else {
