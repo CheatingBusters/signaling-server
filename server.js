@@ -23,6 +23,7 @@ testingrooms: {
 }
 *******************************************************************************/
 const testingrooms = {}
+const socketToRoom = {}
 
 io.on('connection', socket => {
   console.log('Connection occured from', socket.id)
@@ -39,15 +40,21 @@ io.on('connection', socket => {
     }
 
     if (testingrooms[testingroomID].teacher) {
+      // change socket id into new one
       console.log('Teacher', testingrooms[testingroomID].teacher,
         'is already in the testingroom', testingroomID)
+      console.log('SocketID changed to', socket.id)
+
+      testingrooms[testingroomID].teacher.socketID = socket.id
+
       console.log('FULL_TEACHER', testingroomID)
       socket.emit('FULL_TEACHER', testingroomID)
-      return
-    }
-    testingrooms[testingroomID].teacher = {
-      socketID: socket.id,
-      teacherID: teacherID
+    } else {
+      testingrooms[testingroomID].teacher = {
+        socketID: socket.id,
+        teacherID: teacherID
+      }
+      socketToRoom[socket.id] = testingroomID
     }
 
     // Get the teacher in ther testingroom
@@ -93,6 +100,7 @@ io.on('connection', socket => {
       socketID: socket.id,
       studentID: studentID
     })
+    socketToRoom[socket.id] = testingroomID
     socket.join(testingroomID)
 
     // Get the students in the testingroom
@@ -102,6 +110,50 @@ io.on('connection', socket => {
       socket.to(testingrooms[testingroomID].teacher.socketID).emit('GET_STUDENTS', testingrooms[testingroomID].students)
       console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
       socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
+    }
+  })
+
+  socket.on('sending signal', payload => {
+    /*
+    if(payload.isStudent){
+      emit('ADD_TEACHER')
+    }else{
+      emit('ADD_STUDENT')
+    }
+    */
+    io.to(payload.userToSignal).emit('user joined', {
+      signal: payload.signal,
+      callerID: payload.callerID,
+      testee_id: payload.uuid,
+      testee_socket_id: payload.callerID
+    })
+  })
+
+  socket.on('returning signal', payload => {
+    io.to(payload.callerID).emit('receiving returned signal', {
+      signal: payload.signal,
+      id: socket.id
+    })
+  })
+
+  socket.on('disconnect', () => {
+    const testingroomID = socketToRoom[socket.id]
+    // Delete socket id from table
+    // Check whether this id is teacher or is student
+    if (testingrooms[testingroomID].teacher.socketID == socket.id) {
+      // Teacher disconnect
+      // Announce test end
+    } else {
+      // Announce teacher that this student is disconnected
+      let students = testingrooms[testingroomID].students
+      if (students) {
+        delete socketToRoom[socket.id] // 이게 되나?
+
+        students = students.filter(id => id.socketID !== socket.id)
+        testingrooms[testingroomID].students = students
+        console.log('GET_STUDENTS', testingrooms[testingroomID].students)
+        socket.to(testingrooms[testingroomID].teacher.socketID).emit('GET_STUDENTS', testingrooms[testingroomID].students)
+      }
     }
   })
 })
