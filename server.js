@@ -113,6 +113,12 @@ io.on('connection', socket => {
     }
   })
 
+  socket.on('GET_CHEATING', (data, testingroomID) => {
+    testingrooms[testingroomID] &&
+    testingrooms[testingroomID].teacher &&
+      io.to(testingrooms[testingroomID].teacher.socketID).emit('GET_CHEATING', data)
+  })
+
   socket.on('sending signal', payload => {
     io.to(payload.userToSignal).emit('RECEIVE_SIGNAL', {
       signal: payload.signal,
