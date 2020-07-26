@@ -70,13 +70,15 @@ io.on('connection', socket => {
         ':', testingrooms[testingroomID].students)
       console.log('GET_STUDENTS', testingrooms[testingroomID].students)
       socket.emit('GET_STUDENTS', testingrooms[testingroomID].students)
+      socket.emit('GET_STUDENTS_WAITING', testingrooms[testingroomID].students)
+      console.log('GET_STUDENTS_WAITING', testingrooms[testingroomID].students)
     }
   })
 
   socket.on('JOIN_STUDENT', data => {
     const testingroomID = data.testingroomID
     const studentID = data.studentID
-    console.log('Student', studentID, 'has joined the testingroom!', testingroomID)
+    console.log('Student has joined the testingroom!', data)
 
     // Insert the student in the testingroom
     if (!testingrooms[testingroomID]) {
@@ -88,7 +90,14 @@ io.on('connection', socket => {
       console.log('There are no students in testingroom', testingroomID)
       testingrooms[testingroomID].students = []
     }
-
+    // Check if UUID is duplicated, then change existing one
+    const oldStudent = testingrooms[testingroomID].students.find(e => e.studentID === studentID)
+    if (oldStudent) {
+      console.log('Already joined student here', oldStudent)
+      delete socketToRoom[oldStudent.socketID]
+      const studentsInThisRoom = testingrooms[testingroomID].students.filter(e => e.studentID !== studentID)
+      testingrooms[testingroomID].students = studentsInThisRoom
+    }
     if (testingrooms[testingroomID].students.length >= 4) {
       console.log('Testingroom', testingroomID, 'is full of students',
         testingrooms[testingroomID].students)
@@ -100,6 +109,8 @@ io.on('connection', socket => {
       socketID: socket.id,
       studentID: studentID
     })
+
+    console.log('Students', testingrooms[testingroomID])
     socketToRoom[socket.id] = testingroomID
     socket.join(testingroomID)
 
@@ -113,14 +124,16 @@ io.on('connection', socket => {
     }
   })
 
-  socket.on('GET_CHEATING', (data, testingroomID) => {
-    testingrooms[testingroomID] &&
-    testingrooms[testingroomID].teacher &&
-      io.to(testingrooms[testingroomID].teacher.socketID).emit('GET_CHEATING', data)
+  socket.on('GET_CHEATING', (data) => {
+    console.log('GET_CHEATING', data)
+    io.to(data.teacherSocketID).emit('GET_CHEATING', {
+      data: data.data,
+      studentSocketID: data.studentID
+    })
   })
 
   socket.on('sending signal', payload => {
-    console.log('sending signal')
+    console.log('sending signal', 'Caller ID is ', payload.callerID)
     io.to(payload.userToSignal).emit('RECEIVE_SIGNAL', {
       signal: payload.signal,
       callerID: payload.callerID,
@@ -130,8 +143,7 @@ io.on('connection', socket => {
   })
 
   socket.on('returning signal', payload => {
-    console.log('returning signal')
-    console.log(payload.callerID)
+    console.log('returning signal', payload.callerID)
     io.to(payload.callerID).emit('RECEIVE_RETURNED_SIGNAL', {
       signal: payload.signal,
       id: socket.id
@@ -145,6 +157,11 @@ io.on('connection', socket => {
     // Check whether this id is teacher or is student
     if (testingrooms[testingroomID] && testingrooms[testingroomID].teacher &&
        testingrooms[testingroomID].teacher.socketID === socket.id) {
+      console.log('TEACHER_DISCONNCETED')
+      delete socketToRoom[socket.id]
+      delete testingrooms[testingroomID].teacher
+      socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
+      console.log('GET_TEACHERS', testingrooms[testingroomID].teacher)
       // Teacher disconnect
       // Announce test end
     }
@@ -152,12 +169,13 @@ io.on('connection', socket => {
       // Announce teacher that this student is disconnected
       let students = testingrooms[testingroomID].students
       if (students) {
-        delete socketToRoom[socket.id] // 이게 되나?
+        delete socketToRoom[socket.id]
 
         students = students.filter(id => id.socketID !== socket.id)
         testingrooms[testingroomID].students = students
         console.log('GET_STUDENTS', testingrooms[testingroomID].students)
-        socket.to(testingrooms[testingroomID].teacher.socketID).emit('GET_STUDENTS', testingrooms[testingroomID].students)
+        testingrooms[testingroomID].teacher &&
+          socket.to(testingrooms[testingroomID].teacher.socketID).emit('GET_STUDENTS', testingrooms[testingroomID].students)
       }
     }
   })
