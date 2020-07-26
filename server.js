@@ -114,14 +114,7 @@ io.on('connection', socket => {
   })
 
   socket.on('sending signal', payload => {
-    /*
-    if(payload.isStudent){
-      emit('ADD_TEACHER')
-    }else{
-      emit('ADD_STUDENT')
-    }
-    */
-    io.to(payload.userToSignal).emit('user joined', {
+    io.to(payload.userToSignal).emit('RECEIVE_SIGNAL', {
       signal: payload.signal,
       callerID: payload.callerID,
       testee_id: payload.uuid,
@@ -130,7 +123,7 @@ io.on('connection', socket => {
   })
 
   socket.on('returning signal', payload => {
-    io.to(payload.callerID).emit('receiving returned signal', {
+    io.to(payload.callerID).emit('RECEIVE_RETURNED_SIGNAL', {
       signal: payload.signal,
       id: socket.id
     })
@@ -140,10 +133,12 @@ io.on('connection', socket => {
     const testingroomID = socketToRoom[socket.id]
     // Delete socket id from table
     // Check whether this id is teacher or is student
-    if (testingrooms[testingroomID].teacher && testingrooms[testingroomID].teacher.socketID === socket.id) {
+    if (testingrooms[testingroomID] && testingrooms[testingroomID].teacher &&
+       testingrooms[testingroomID].teacher.socketID === socket.id) {
       // Teacher disconnect
       // Announce test end
-    } else {
+    }
+    if (testingrooms[testingroomID] && testingrooms[testingroomID].students) {
       // Announce teacher that this student is disconnected
       let students = testingrooms[testingroomID].students
       if (students) {
