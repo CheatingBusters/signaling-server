@@ -120,6 +120,7 @@ io.on('connection', socket => {
   })
 
   socket.on('sending signal', payload => {
+    console.log('sending signal')
     io.to(payload.userToSignal).emit('RECEIVE_SIGNAL', {
       signal: payload.signal,
       callerID: payload.callerID,
@@ -129,6 +130,8 @@ io.on('connection', socket => {
   })
 
   socket.on('returning signal', payload => {
+    console.log('returning signal')
+    console.log(payload.callerID)
     io.to(payload.callerID).emit('RECEIVE_RETURNED_SIGNAL', {
       signal: payload.signal,
       id: socket.id
@@ -136,6 +139,7 @@ io.on('connection', socket => {
   })
 
   socket.on('disconnect', () => {
+    console.log('disconnect')
     const testingroomID = socketToRoom[socket.id]
     // Delete socket id from table
     // Check whether this id is teacher or is student
