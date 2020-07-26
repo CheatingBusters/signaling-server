@@ -160,8 +160,8 @@ io.on('connection', socket => {
       console.log('TEACHER_DISCONNCETED')
       delete socketToRoom[socket.id]
       delete testingrooms[testingroomID].teacher
-      socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
-      console.log('GET_TEACHERS', testingrooms[testingroomID].teacher)
+      socket.emit('GET_TEACHER', [])
+      console.log('GET_TEACHERS', [])
       // Teacher disconnect
       // Announce test end
     }
