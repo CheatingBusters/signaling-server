@@ -137,8 +137,7 @@ io.on('connection', socket => {
     io.to(payload.userToSignal).emit('RECEIVE_SIGNAL', {
       signal: payload.signal,
       callerID: payload.callerID,
-      testee_id: payload.uuid,
-      testee_socket_id: payload.callerID
+      studentID: payload.uuid
     })
   })
 
