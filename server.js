@@ -70,8 +70,6 @@ io.on('connection', socket => {
         ':', testingrooms[testingroomID].students)
       console.log('GET_STUDENTS', testingrooms[testingroomID].students)
       socket.emit('GET_STUDENTS', testingrooms[testingroomID].students)
-      socket.emit('GET_STUDENTS_WAITING', testingrooms[testingroomID].students)
-      console.log('GET_STUDENTS_WAITING', testingrooms[testingroomID].students)
     }
   })
 
@@ -122,14 +120,6 @@ io.on('connection', socket => {
       console.log('GET_TEACHER', testingrooms[testingroomID].teacher)
       socket.emit('GET_TEACHER', testingrooms[testingroomID].teacher)
     }
-  })
-
-  socket.on('GET_CHEATING', (data) => {
-    console.log('GET_CHEATING', data)
-    io.to(data.teacherSocketID).emit('GET_CHEATING', {
-      data: data.data,
-      studentSocketID: data.studentID
-    })
   })
 
   socket.on('sending signal', payload => {
