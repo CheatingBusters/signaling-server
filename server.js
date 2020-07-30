@@ -139,6 +139,10 @@ io.on('connection', socket => {
     })
   })
 
+  socket.on('SEND_NOTIFICATION', payload => {
+    socket.emit('GET_NOTIFICATION', payload)
+  })
+
   socket.on('disconnect', () => {
     console.log('disconnect')
     const testingroomID = socketToRoom[socket.id]
